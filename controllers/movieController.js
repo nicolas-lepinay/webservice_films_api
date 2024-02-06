@@ -6,14 +6,18 @@ const { v4: uuidv4 } = require('uuid');
 module.exports.findOne = async (req, res) => {
     try {
         const uid = req.params.uid;
-        const movie = await Movie.find({ uid: uid}).select('-_id'); // Exclure le champ _id du résultat
+        const movie = await Movie.findOne({ uid: uid}).select('-_id'); // Exclure le champ _id du résultat
 
          // 404 - No movie found:
          if (!movie) {
             return res.status(404).json({error: { code: 404, message: "Aucun film correspondant n'a été trouvé."}});
         }
+
+        // TODO: Check if reservations are available
+        const movieWithReservations = { ...movie.toObject(), hasReservationsAvailable: "A IMPLEMENTER" };
+
         // 200
-        return res.status(200).json(movie);
+        return res.status(200).json(movieWithReservations);
     } catch (err) {
         // 500 - Server error:
         return res.status(500).json({error: { code: 500, message: `Erreur interne (${err})`}});
@@ -41,10 +45,10 @@ module.exports.findAll = async (req, res) => {
         // 204 - AUCUN FILM
         if (movies.length == 0) return res.status(204).json("Pas de résultat de recherche.");
 
-        // Check if reservations are available
+        // TODO: Check if reservations are available
         const moviesWithReservations = movies.map(movie => {
-            const hasReservations = "A IMPLEMENTER" /*checkReservations(movie._id)*/ // Remplacer cette ligne par la logique réelle pour vérifier les réservations.
-            return { ...movie.toObject(), hasReservations };
+            const hasReservationsAvailable = "A IMPLEMENTER" /*checkReservations(movie._id)*/ // Remplacer cette ligne par la logique réelle pour vérifier les réservations.
+            return { ...movie.toObject(), hasReservationsAvailable };
         });
         
 
