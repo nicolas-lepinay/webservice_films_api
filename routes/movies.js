@@ -6,7 +6,7 @@ const myMulter = require("../services/upload");
 const { authenticate, ensureAdmin } = require('../middlewares/middleware');
 
 // GET A MOVIE
-router.get("/:id", movieController.findOne);    
+router.get("/:uid", movieController.findOne);    
 
 // GET ALL MOVIES
 router.get("/", movieController.findAll);  
@@ -15,12 +15,12 @@ router.get("/", movieController.findAll);
 router.post("/", authenticate, ensureAdmin, movieController.create);  
 
 // UPDATE A MOVIE
-router.put("/:id", authenticate, ensureAdmin, movieController.update);   
+router.put("/:uid", authenticate, ensureAdmin, movieController.update);   
 
 // DELETE A MOVIE
-router.delete("/:id", authenticate, ensureAdmin, movieController.delete);       
+router.delete("/:uid", authenticate, ensureAdmin, movieController.delete);       
 
 // UPLOAD AN IMAGE FOR A MOVIE
-router.post("/:id/upload", myMulter.upload.single("file"), movieController.uploadImage);   
+router.post("/:uid/upload", myMulter.upload.single("file"), movieController.uploadImage);   
 
 module.exports = router

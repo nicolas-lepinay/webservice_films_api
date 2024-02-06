@@ -1,36 +1,30 @@
 const mongoose = require("mongoose");
 const Movie = require("../models/Movie");
-const Genre = require("../models/Genre");
+const { v4: uuidv4 } = require('uuid');
 
 // * GET A MOVIE *
 module.exports.findOne = async (req, res) => {
     try {
-        const movie = await Movie.findById(req.params.id);
-         // If no movie was found:
+        const uid = req.params.uid;
+        const movie = await Movie.find({ uid: uid}).select('-_id'); // Exclure le champ _id du résultat
+
+         // 404 - No movie found:
          if (!movie) {
-            return res.status(404).json({success: false, error: { code: 404, message: "Aucun film correspondant n'a été trouvé."}});
+            return res.status(404).json({error: { code: 404, message: "Aucun film correspondant n'a été trouvé."}});
         }
-        res.status(200).json({success: true, result: movie});
+        // 200
+        return res.status(200).json(movie);
     } catch (err) {
-         // If error is due to bad ID format:
-         if (err instanceof mongoose.Error.CastError) {
-            return res.status(400).json({success: false, error: { code: 400, message: "L'identifiant saisi est invalide."}});
-        }
-        // Other server errors:
-        return res.status(500).json({success: false, error: { code: 500, message: err}});
+        // 500 - Server error:
+        return res.status(500).json({error: { code: 500, message: `Erreur interne (${err})`}});
     }
 }
 
 // * GET ALL MOVIES *
 module.exports.findAll = async (req, res) => {
     try {
-        // 1️⃣ Pagination
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 5;
-        const startIndex = (page - 1) * limit;
-
-        // 2️⃣ Search by keyword
-        const keyword = req.query.keyword;
+        // Search by keyword
+        const keyword = req.query.query; // ...?query=titanic
         let query = {};
 
         if (keyword) {
@@ -38,114 +32,103 @@ module.exports.findAll = async (req, res) => {
                 $or: [
                     { name: { $regex: keyword, $options: 'i' } },
                     { description: { $regex: keyword, $options: 'i' } }
-                ]
+                ],
             };
         }
 
-        // 3️⃣ Search by genre name
-        const genreName = req.query.genre;
-        if (genreName) {
-            const genre = await Genre.findOne({ name: { $regex: genreName, $options: 'i'  }});
-            if (genre) {
-                query.categoryId = genre._id.toString();
-            } else {
-                return res.status(404).json({success: false, error: { code: 404, message: "Aucun genre correspondant n'a été trouvé."}});
-            }
-        }
+        const movies = await Movie.find(query).select('-_id');
 
-        const totalMovies = await Movie.countDocuments(query);
-        const movies = await Movie.find(query).limit(limit).skip(startIndex);
-        res.status(200).json({         
-            success: true,
-            result: movies,
-            total: totalMovies,
-            totalPages: Math.ceil(totalMovies / limit),
-            currentPage: page,
-            limit,
+        // 204 - AUCUN FILM
+        if (movies.length == 0) return res.status(204).json("Pas de résultat de recherche.");
+
+        // Check if reservations are available
+        const moviesWithReservations = movies.map(movie => {
+            const hasReservations = "A IMPLEMENTER" /*checkReservations(movie._id)*/ // Remplacer cette ligne par la logique réelle pour vérifier les réservations.
+            return { ...movie.toObject(), hasReservations };
         });
+        
+
+        // 200
+        res.status(200).json(moviesWithReservations);
     } catch (err) {
-        res.status(404).json({success: false, error: { code: 404, message: err}});
+        // 500 - Erreur interner
+        res.status(500).json({error: { code: 500, message: `Erreur interne (${err})`}});
     }
 }
 
-// * GET MOVIES BY GENRE *
-module.exports.findByGenre = async (req, res) => {
-    try {
-        const categoryId = req.params.id;
-        const movies = await Movie.find({ categoryId: categoryId });
-
-        res.status(200).json({
-            success: true,
-            result: movies
-        });
-    } catch (err) {
-        res.status(404).json({ success: false, error: err.message });
-    }
-}
 
 // * CREATE A MOVIE *
 module.exports.create = async (req, res) => {
-    const newMovie = new Movie(req.body)
     try {
+        const uid = uuidv4();
+        const newMovie = new Movie({ uid, ...req.body });
+
         const savedMovie = await newMovie.save();
-        res.status(201).json({success: true, result: savedMovie});
+        res.status(201).json(savedMovie);
     } catch (err) {
         if (err.name === 'ValidationError') {
-            return res.status(422).json({success: false, error: { code: 422, message: err.message}});
+            return res.status(422).json({error: { code: 422, message: `Le contenu de l'objet film est invalide (${err.message})`}});
         }
         // For other error types:
-        return res.status(500).json({success: false, error: { code: 500, message: err}});
+        return res.status(500).json({error: { code: 500, message: `Erreur interne (${err})`}});
     }   
 }
 
 // * UPDATE A MOVIE *
 module.exports.update = async (req, res) => {
+    const uid = req.params.uid;
     try {
-        const movie = await Movie.findById(req.params.id);
-        if(!movie) {
-            return res.status(404).json({success: false, error: { code: 404, message: "Aucun film correspondant n'a été trouvé."}});
+        // Trouver le film par uid et le mettre à jour avec les données reçues dans req.body
+        // L'option { new: true } garantit que le document retourné est post-mise à jour
+        // .select('-_id') exclut le champ _id du document retourné
+        const updatedMovie = await Movie.findOneAndUpdate({ uid: uid }, req.body, { new: true }).select('-_id');
+        
+        if (!updatedMovie) {
+            return res.status(404).json({error: { code: 404, message: "Aucun film correspondant n'a été trouvé."}});
         }
-        await movie.updateOne({ $set: req.body });
-        const updatedMovie = await Movie.findById(req.params.id);
-        res.status(200).json({success: true, result: updatedMovie});
+        
+        res.status(200).json(updatedMovie);
     } catch (err) {
-        if (err.name === 'CastError') {
-            return res.status(422).json({success: false, error: { code: 422, message: err.message}});
+        if (err.name === 'ValidationError') {
+            return res.status(422).json({error: { code: 422, message: `Le contenu de l'objet film est invalide (${err.message})`}});
         }
-        return res.status(500).json({success: false, error: { code: 500, message: err}});
+        // Pour d'autres types d'erreurs
+        return res.status(500).json({error: { code: 500, message: `Erreur interne (${err})`}});
     }
-}
+};
+
 
 // * DELETE A MOVIE *
 module.exports.delete = async (req, res) => {
     try {
-        const movie = await Movie.findById(req.params.id);
+        const uid = req.params.uid;
+        const movie = await Movie.find({ uid: uid });
+
         if(!movie) {
-            return res.status(404).json({success: false, error: { code: 404, message: "Aucun film correspondant n'a été trouvé."}});
+            return res.status(404).json({error: { code: 404, message: "Aucun film correspondant n'a été trouvé."}});
         }
         await movie.deleteOne();
-        res.status(204).json({success: true});
+        res.status(204).json("Le film a été supprimé avec succès.");
     } catch (err) {
-        if (err instanceof mongoose.Error.CastError) {
-            return res.status(422).json({success: false, error: { code: 422, message: err.message}});
-        }
-        return res.status(500).json({success: false, error: { code: 500, message: err}});
+        return res.status(500).json({error: { code: 500, message: `Erreur interne (${err})`}});
     }
 }
 
 // * UPLOAD AN IMAGE FOR A MOVIE *
 module.exports.uploadImage = async (req, res) => {
     try {
-        const movie = await Movie.findById(req.params.id);
+        const uid = req.params.uid;
+        const movie = await Movie.find({ uid: uid });
+
         if (!movie) {
-            return res.status(404).json({success: false, error: { code: 500, message: "Le film n'a pas pu être trouvé."}});
+            return res.status(404).json({error: { code: 404, message: "Aucun film correspondant n'a été trouvé."}});
         }
 
         movie.image = req.file.path; // Update movie's image's path
         await movie.save();
 
-        res.status(200).json({ success: true, result: movie });
+        res.status(200).json(movie);
     } catch (err) {
-        return res.status(500).json({success: false, error: { code: 500, message: err}});
+        return res.status(500).json({error: { code: 500, message: `Erreur interne (${err})`}});
     }
 }

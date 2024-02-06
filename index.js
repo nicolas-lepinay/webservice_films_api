@@ -10,7 +10,6 @@ dotenv.config();
 
 // 🚗 Routes
 const movieRoute = require("./routes/movies")
-const genreRoute = require("./routes/genres")
 
 // ➡️ Module imports :
 //const swagger = require("./doc/swagger.js");
@@ -32,7 +31,6 @@ app.use(morgan("common"));
 
 // =====> API Routes
 app.use("/api/movies", movieRoute);
-app.use("/api/genres", genreRoute);
 
 // =====> Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile, { swaggerOptions: { persistAuthorization: true } }));
