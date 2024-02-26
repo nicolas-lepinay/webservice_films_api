@@ -1,4 +1,3 @@
-const mongoose = require("mongoose");
 const Movie = require("../models/Movie");
 const { v4: uuidv4 } = require('uuid');
 
@@ -40,7 +39,7 @@ module.exports.findAll = async (req, res) => {
             };
         }
 
-        const movies = await Movie.find(query).select('-_id');
+        const movies = await Movie.find(query).select('-_id -__v');
 
         // 204 - AUCUN FILM
         if (movies.length == 0) return res.status(204).json("Pas de résultat de recherche.");
@@ -106,7 +105,7 @@ module.exports.update = async (req, res) => {
 module.exports.delete = async (req, res) => {
     try {
         const uid = req.params.uid;
-        const movie = await Movie.find({ uid: uid });
+        const movie = await Movie.findOne({ uid: uid });
 
         if(!movie) {
             return res.status(404).json({error: { code: 404, message: "Aucun film correspondant n'a été trouvé."}});

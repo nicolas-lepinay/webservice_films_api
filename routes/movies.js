@@ -1,4 +1,3 @@
-const Movie = require("../models/Movie");
 const router = require("express").Router();
 const movieController = require("../controllers/movieController");
 const myMulter = require("../services/upload");
