@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Movie = require("../models/Movie");
 const { v4: uuidv4 } = require('uuid');
+const amqp = require("amqplib");
 
 // * GET A MOVIE *
 module.exports.findOne = async (req, res) => {
@@ -68,6 +69,23 @@ module.exports.create = async (req, res) => {
         const newMovie = new Movie({ uid, ...req.body });
 
         const savedMovie = await newMovie.save();
+
+        // Try to read RabbitMQ
+        console.log("Waiting for messages...")
+        const amqpServer = "amqp://guest:guest@172.17.0.4:5672"
+        const connection = await amqp.connect(amqpServer)
+        const channel = await connection.createChannel();
+        await channel.assertQueue("login-queue");
+        
+        await channel.consume("login-queue", message => {
+            const input = JSON.parse(message.content.toString());            
+            console.log(`Recieved message with login : ${input.login}`)
+            channel.ack(message);
+        })
+
+        await channel.close();
+        await connection.close();
+
         res.status(201).json(savedMovie);
     } catch (err) {
         if (err.name === 'ValidationError') {
