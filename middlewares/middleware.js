@@ -17,7 +17,6 @@ exports.authenticate = async (req, res, next) => {
 
         if (data.error) return res.status(403).json(
             {
-                success: false, 
                 error: { code: 403, message: "Access token invalide." }
             });
 
