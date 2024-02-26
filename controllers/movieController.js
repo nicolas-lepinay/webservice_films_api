@@ -16,7 +16,6 @@ module.exports.findOne = async (req, res) => {
             return res.status(404).json({error: { code: 404, message: "Aucun film correspondant n'a été trouvé."}});
         }
 
-        // TODO: Check if reservations are available
         const seances = await findSeancesByMovieUid(movie.uid);
         const hasReservationsAvailable = seances.length > 0;
 
@@ -51,7 +50,6 @@ module.exports.findAll = async (req, res) => {
         // 204 - AUCUN FILM
         if (movies.length == 0) return res.status(204).json("Pas de résultat de recherche.");
 
-        // TODO: Check if reservations are available
         const moviesWithReservationsPromises = movies.map(async movie => {
             const seances = await findSeancesByMovieUid(movie.uid);
             const hasReservationsAvailable = seances.length > 0;
