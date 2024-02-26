@@ -1,9 +1,13 @@
 const Movie = require("../models/Movie");
+
+const { findSeancesByMovieUid } = require('../services/seances');
+
 const { v4: uuidv4 } = require('uuid');
 
 // * GET A MOVIE *
 module.exports.findOne = async (req, res) => {
     try {
+
         const uid = req.params.uid;
         const movie = await Movie.findOne({ uid: uid}).select('-_id'); // Exclure le champ _id du résultat
 
@@ -13,7 +17,10 @@ module.exports.findOne = async (req, res) => {
         }
 
         // TODO: Check if reservations are available
-        const movieWithReservations = { ...movie.toObject(), hasReservationsAvailable: "A IMPLEMENTER" };
+        const seances = await findSeancesByMovieUid(movie.uid);
+        const hasReservationsAvailable = seances.length > 0;
+
+        const movieWithReservations = { ...movie.toObject(), hasReservationsAvailable };
 
         // 200
         return res.status(200).json(movieWithReservations);
@@ -45,12 +52,15 @@ module.exports.findAll = async (req, res) => {
         if (movies.length == 0) return res.status(204).json("Pas de résultat de recherche.");
 
         // TODO: Check if reservations are available
-        const moviesWithReservations = movies.map(movie => {
-            const hasReservationsAvailable = "A IMPLEMENTER" /*checkReservations(movie._id)*/ // Remplacer cette ligne par la logique réelle pour vérifier les réservations.
+        const moviesWithReservationsPromises = movies.map(async movie => {
+            const seances = await findSeancesByMovieUid(movie.uid);
+            const hasReservationsAvailable = seances.length > 0;
             return { ...movie.toObject(), hasReservationsAvailable };
         });
-        
 
+        // Attendre que toutes les promesses soient résolues
+        const moviesWithReservations = await Promise.all(moviesWithReservationsPromises);
+        
         // 200
         res.status(200).json(moviesWithReservations);
     } catch (err) {
@@ -131,6 +141,22 @@ module.exports.uploadImage = async (req, res) => {
         await movie.save();
 
         res.status(200).json(movie);
+    } catch (err) {
+        return res.status(500).json({error: { code: 500, message: `Erreur interne (${err})`}});
+    }
+}
+
+// * CHECK IF MOVIE HAS AVAILABLE SEANCES *
+module.exports.hasAvailableSeances = async (req, res) => {
+    try {
+        const uid = req.params.uid;
+        const movie = await Movie.findOne({ uid: uid });
+
+        if(!movie) {
+            return res.status(404).json({error: { code: 404, message: "Aucun film correspondant n'a été trouvé."}});
+        }
+        await movie.deleteOne();
+        res.status(204).json("Le film a été supprimé avec succès.");
     } catch (err) {
         return res.status(500).json({error: { code: 500, message: `Erreur interne (${err})`}});
     }

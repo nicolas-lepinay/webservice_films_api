@@ -20,6 +20,10 @@ router.put("/:uid", authenticate, ensureAdmin, movieController.update);
 router.delete("/:uid", authenticate, ensureAdmin, movieController.delete);       
 
 // UPLOAD AN IMAGE FOR A MOVIE
-router.post("/:uid/upload", myMulter.upload.single("file"), movieController.uploadImage);   
+router.post("/:uid/upload", myMulter.upload.single("file"), movieController.uploadImage);  
+
+// CHECK IF MOVIE HAS AVAILABLE SEANCES
+router.get("/:uid/seances", movieController.hasAvailableSeances);  
+
 
 module.exports = router

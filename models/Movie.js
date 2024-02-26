@@ -20,9 +20,19 @@ const MovieSchema = new mongoose.Schema({
         release_date: {
             type: Date,
         },
+        duration: {
+            type: Number,
+            required: true,
+            min: 0,
+            max: 240,
+            validate : {
+                validator : Number.isInteger,
+                message   : 'The duration ({VALUE}) is not an integer value.'
+              }
+        },
         rate: {
             type: Number,
-            required: false,
+            required: true,
             min: 0,
             max: 5,
             validate : {
