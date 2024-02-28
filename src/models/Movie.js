@@ -40,6 +40,10 @@ const MovieSchema = new mongoose.Schema({
                 message   : 'The rate ({VALUE}) is not an integer value.'
               }
         },
+        image: {
+            type: String,
+            required: false,
+        },
     }, { timestamps: true } // Pour ajouter des champs 'createdAt' et 'updatedAt' mis à jour automatiquement par Mongo
 );
 
