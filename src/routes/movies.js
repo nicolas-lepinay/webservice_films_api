@@ -1,6 +1,5 @@
 const router = require("express").Router();
 const movieController = require("../controllers/movieController");
-const reservationController = require("../controllers/reservationController");
 const myMulter = require("../services/upload");
 
 const { authenticate, ensureAdmin } = require('../middlewares/middleware');
@@ -26,10 +25,4 @@ router.post("/:uid/upload", myMulter.upload.single("file"), movieController.uplo
 // CHECK IF MOVIE HAS AVAILABLE SEANCES
 router.get("/:uid/seances", movieController.hasAvailableSeances);  
 
-// CREATE A RESERVATION REQUEST
-router.post("/:uid/reservations", authenticate, reservationController.create);  
-
-// GET ALL RESERVATIONS
-router.post("/:uid/reservations", authenticate, ensureAdmin, reservationController.findAll);  
-
-module.exports = router
+module.exports = router;
